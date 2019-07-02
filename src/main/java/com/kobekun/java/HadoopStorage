@@ -1,0 +1,9 @@
+
+
+put：1file => 1..n block ==> 存储在不同的节点
+get：去nn去查找该file对应的元数据信息
+
+cat blk_1073741829 >> jdk.tgz
+cat blk_1073741830 >> jdk.tgz
+
+tar -xf jdk.tgz 可以解压
