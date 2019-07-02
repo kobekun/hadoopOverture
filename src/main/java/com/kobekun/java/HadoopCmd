@@ -1,0 +1,34 @@
+
+hadoop fs -ls /
+hadoop fs -put README.txt /
+hadoop fs -cat /README.txt
+
+hadoop fs -text /README.txt
+hadoop fs -copyFromLocal NOTICE.txt /
+hadoop fs -moveFromLocal NOTICE.txt_kobekun /
+hadoop fs -get /README.txt ./
+hadoop fs -mkdir /hdfs-test
+hadoop fs -mv /README.txt /hdfs-test/  移动/重命名
+hadoop fs -cp /hdfs-test/README.txt /hdfs-test/README.txt_kobekun
+
+-rw-r--r--   1 hadoop supergroup       1366 2019-07-03 07:01 /hdfs-test/README.txt
+-rw-r--r--   1 hadoop supergroup       1366 2019-07-03 07:24 /hdfs-test/README.txt_kobekun
+
+hadoop fs -getmerge /hdfs-test ./READMEkobekun.txt
+-rw-r--r-- 1 hadoop hadoop 2732 Jul  3 07:27 READMEkobekun.txt
+1366+1366=2732
+
+hadoop fs -rm /NOTICE.txt_kobekun
+
+[hadoop@hadoop000 hadoop-2.6.0-cdh5.15.1]$ hadoop fs -rm /hdfs-test
+rm: `/hdfs-test': Is a directory
+[hadoop@hadoop000 hadoop-2.6.0-cdh5.15.1]$ hadoop fs -rmdir /hdfs-test
+rmdir: `/hdfs-test': Directory is not empty  目录不为空，删不掉
+[hadoop@hadoop000 hadoop-2.6.0-cdh5.15.1]$ hadoop fs -rmr /hdfs-test
+rmr: DEPRECATED: Please use 'rm -r' instead.
+Deleted /hdfs-test
+
+hadoop fs -rmr /hdfs-test  ==> hadoop fs -rm -r /hdfs-test
+
+
+
