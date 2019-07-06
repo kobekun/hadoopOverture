@@ -1,0 +1,17 @@
+
+使用HDFS API完成HDFS文件系统上的文件的词频统计
+
+Wordcount
+
+    /path/1.txt  : hello world hello kobekun
+    /path/2.txt  : hello world hello kobekun
+
+    (hello,4) (world,2)
+
+    将统计结果输出到HDFS上去
+
+    只允许使用HDFS API
+
+
+    1) 掌握HDFS API
+    2) 对MR认识深刻

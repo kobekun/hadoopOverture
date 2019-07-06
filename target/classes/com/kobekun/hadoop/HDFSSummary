@@ -1,0 +1,73 @@
+HDFS概述：
+
+    1) 分布式
+    2) cheap commodity hardware
+    3) fault-tolerant 容错的
+    4) high throughput
+    5) large data sets
+
+    分布式文件系统
+
+HDFS前提和设计目标：
+
+  1、硬件错误
+
+  每个机器只存储文件的部分数据，blocksize=128M
+  block存放在不同的机器，由于容错，HDFS默认采用3副本机制
+
+  2、streaming data access 流式数据访问
+
+  the emphasis is on high throughput of data access rather than low
+  latency of data access.
+
+  3、large data sets
+
+  4、移动计算比移动数据更划算，cheaper
+
+HDFS架构：
+    1) NameNode(master) and DataNodes(slave)
+    2) master/slave架构
+    3) NN:
+        manage the file system namespace
+            /home/hadoop/software
+                        /app
+        regulates access to files by clients
+    4) DN:  storage
+    5) HDFS exposes a file system namespace and allows user data to be stored in files
+    6)  a file is split into one or more blocks
+            blocksize：128M
+            150M拆成2个block
+    7) blocks are stored in a set of DataNodes
+           为了容错
+    8) NameNode executes file system namespace operations like opening,
+                closing, and renaming files and directories
+    9) determines the mapping of blocks to DataNodes
+        a.txt 150M blocksize=12M
+        a.txt 拆分成2个块  一个block1是128M 另一个block2是22M
+
+        a.txt
+            block1: 128M, 192.168.199.1
+            block2: 22M, 192.168.199.2
+
+            namenode 记录块在哪个机器上
+        get a.txt
+
+        拆文件和组合文件 这个过程对用户是不感知的
+    10) 通常情况下：一个node部署一个组件(DataNode)
+     The architecture does not preclude running multiple DataNodes
+     on the same machine but in a real deployment that is rarely the case
+
+hadoop环境搭建：
+    使用的Hadoop相关版本：CDH
+    	CDH相关软件包下载地址：http://archive.cloudera.com/cdh5/cdh/5/
+    	Hadoop使用版本：hadoop-2.6.0-cdh5.15.1
+    	Hadoop下载：wget http://archive.cloudera.com/cdh5/cdh/5/hadoop-2.6.0-cdh5.15.1.tar.gz
+    	Hive使用版本：hive-1.1.0-cdh5.15.1
+
+
+
+
+
+
+
+
