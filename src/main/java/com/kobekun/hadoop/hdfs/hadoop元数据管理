@@ -1,0 +1,22 @@
+
+hdfs的元数据管理：
+
+    元数据： hdfs的目录结构以及每个文件的Block信息(id,副本系数,block存放在哪个DN上)
+    存在什么地方：${hadoop.tmp.dir}/name/...
+    元数据存放在文件中：
+
+
+    /test1                  x
+    /test1/a.txt            x
+
+    /test2/
+    /test2/1.txt            x
+    /test2/2.txt
+    /test2/xxx
+    /test2/3.txt
+
+    hadoop fs -put xxx /text2
+    hadoop fs -rmr /test1
+    hadoop fs -mv /test2/1.txt /test2/3.txt
+
+    safemode  打开状态无法进行写操作
