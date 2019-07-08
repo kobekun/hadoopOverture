@@ -1,0 +1,24 @@
+
+MapReduce优点：海量数据离线处理&易开发&易运行
+MapReduce缺点：实时流式处理
+
+wordcount:
+
+
+input --> splitting --> mapping --> shuffling --> reducing --> final result
+
+splitting: 将单词拆分成多行
+mapping：将每个单词键值对成(xx,1)
+shuffling：将map中key相同的键值对放在一块
+reduce：进行合并操作
+
+
+编程核心概念：
+
+Split
+InputFormat
+OutputFormat
+Combiner
+Partitioner
+
+
