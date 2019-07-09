@@ -16,17 +16,18 @@ import java.net.URI;
  *
  * Driver： 配置Mapper，Reducer的相关属性
  *
- * 提交到本地运行
  */
 public class WordCountApp {
 
     public static void main(String[] args) throws Exception {
 
+        System.setProperty("HADOOP_USER_NAME", "hadoop");
+
         Configuration conf = new Configuration();
 
-        conf.set("dfs.defaultFS", "hdfs://192.168.137.2:8020");
+        conf.set("fs.defaultFS", "hdfs://192.168.137.2:8020");
         //创建任务
-        Job job = Job.getInstance();
+        Job job = Job.getInstance(conf);
 
         //设置Job对应的参数：主类
         job.setJarByClass(WordCountApp.class);
@@ -44,11 +45,11 @@ public class WordCountApp {
         job.setOutputValueClass(IntWritable.class);
 
         //如果输出目录已经存在则先删除
-        FileSystem fs = FileSystem.get(new URI("hdfs://192.168.137.2:8020"),conf,"hadoop");
+//        FileSystem fs = FileSystem.get(new URI("hdfs://192.168.137.2:8020"),conf,"hadoop");
         Path output = new Path("/wordcount/kobekun/output");
-        if(fs.exists(output)){
-            fs.delete(output, true);
-        }
+//        if(fs.exists(output)){
+//            fs.delete(output, true);
+//        }
 
         //设置job的参数：作业输入和输出的路径
         FileInputFormat.setInputPaths(job, new Path("/wordcount/kobekun/input"));
