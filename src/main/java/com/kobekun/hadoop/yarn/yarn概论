@@ -1,0 +1,61 @@
+
+Yarn产生背景
+
+MapReduce1.X 和 2.X
+
+    master/slave: JobTracker/TaskTracker
+    JobTracker: 单点压力大
+    仅仅只能支持MapReduce作业
+
+Yarn正式在生产上使用  是在MapReduce2.X上
+
+  资源利用率
+    所有的计算框架运行在一个集群上，共享一个集群的资源，按需分配
+
+    The fundamental idea of YARN is to split up the functionalities of
+     resource management and job scheduling/monitoring into separate daemons.
+
+    1.X中的jobTracker 拆分成resource management and job scheduling/monitoring
+
+    master --> resource management : ResourceManager(RM)
+                job scheduling/monitoring : per-application ApplicationMaster (AM)
+
+    slave --> NodeManager(NM)
+
+
+  Yarn架构：client、ResourceManager、NodeManager、ApplicationMaster
+        master\slave：RM\NM
+
+   Client：向RM提交任务、杀死任务
+   ApplicationMaster：
+        每个应用程序对应一个AM
+        AM向RM申请资源用于在NM上启动对应的task
+        数据切分
+        为每个task想RM申请资源(container)
+        和NM交互
+        任务的监控
+
+   NodeManager：
+        干活
+        向RM发送心跳信息、任务的执行情况、启动任务
+        接收来自RM的请求来启动任务
+        处理来自AM的命令
+
+   ResourceManager：集群中同一时刻对外提供服务的只有一个，负责资源相关
+        处理来自客户端的请求：提交、杀死
+        启动、监控AM
+        监控NM
+        资源相关
+
+   container：任务的运行抽象
+        memory、CPU
+        task运行在container中
+        一个可以运行AM、也可以运行map/reduce task
+
+   一句话总结：client提交一个作业到RM，NM申请一个AM，AM然后到RM上申请资源，申请到资源后
+        到对应的NM上去启动container，然后再container上启动maptask、reducetask
+
+
+
+
+
