@@ -21,6 +21,11 @@ public class AccessLocalApp {
         job.setMapperClass(AccessMapper.class);
         job.setReducerClass(AccessReducer.class);
 
+        //设置自定义分区个数
+        job.setPartitionerClass(AccessPartitioner.class);
+        //设置reduce个数  和Partitioner中的相对应
+        job.setNumReduceTasks(3);
+
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Access.class);
 
