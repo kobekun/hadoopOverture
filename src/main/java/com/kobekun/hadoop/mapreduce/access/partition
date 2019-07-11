@@ -1,0 +1,18 @@
+
+
+public int getPartition(K key, V value,
+                          int numReduceTasks) {
+    return (key.hashCode() & Integer.MAX_VALUE) % numReduceTasks;
+  }
+
+  numReduceTasks：作业所指定的reducer个数  决定了reduce作业输出的文件个数
+
+需求：将统计结果按照手机号的前缀进行区分，并输出到不同的输出文件中
+
+    13* ==> 写到一个文件中
+    15* ==> 写到一个文件中
+    其他 ==> 写到一个文件中
+
+    Partitioner 决定maptask输出的数据交由哪个reducetask处理
+    默认实现：分发的key的hash值与reduce task个数取模
+
