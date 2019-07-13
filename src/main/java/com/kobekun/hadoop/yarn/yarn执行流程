@@ -1,0 +1,12 @@
+
+
+1、客户端提交作业到ResourceManager
+2、RM要求NodeManager启动第一个container
+3、container准备运行应用程序的ApplicationMaster(对MapReduce来说是
+MapReduce ApplicationMaster，对spark来说是spark ApplicationMaster)
+4、AM到RM上注册并申请资源
+5、申请到资源后，AM到该NM和另外的几个NM上启动container
+6、container中运行map task或者reduce task 或者spark的一些task
+
+
+注：AM知道container的运行情况
