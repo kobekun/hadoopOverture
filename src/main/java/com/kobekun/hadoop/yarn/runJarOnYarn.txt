@@ -1,0 +1,15 @@
+提交hadoop自带的作业
+
+hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.6.0-cdh5.15.1.jar wordcount /wc/input/data.txt /wc/output/
+
+提交自己开发的MR作业到YARN上运行的步骤
+
+1、到项目所在的目录去打包 mvn clean package -DskipTests
+打包完成的jar包为hadoopOverture-1.0-SNAPSHOT.jar
+
+2、把jar包传到服务器上
+
+3、把数据传到hdfs
+
+4、执行作业
+hadoop jar /home/hadoop/lib/hadoopOverture-1.0-SNAPSHOT.jar com.kobekun.hadoop.mapreduce.access.AccessYARNApp /access/input/access.log /access/output
