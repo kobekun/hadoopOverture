@@ -1,0 +1,16 @@
+
+ReduceJoin
+    数据通过mapper加载过来，经过shuffle操作，在reduce端实现真正的join操作
+
+    dept: deptno、dname
+    emp: empno、ename、sal、deptno
+
+    面试
+    1：mapper类有几个参数？分别代表什么意思？
+    2：mapper类里面有几个参数？分别代表什么意思？、
+    3：为什么字符串拼接不要使用+
+    4：mapper或者reducer的生命周期方法有哪些？
+
+
+    能规避shuffle的地方就不用shuffle
+
