@@ -1,0 +1,34 @@
+
+hdfs上的文件没有scheme信息
+
+1、Facebook开源，解决海量结构化日志的统计问题
+2、构建在hadoop之上的数据仓库
+3、Hive提供的SQL查询语言：HQL
+4、底层支持多种执行引擎：MR/tez/spark
+
+
+为什么要使用hive？
+    1、容易、简单上手
+    2、为超大数据集设计的计算\扩展能力
+
+统一的元数据管理：
+    hive数据存放在hdfs上
+    元数据信息(记录数据的数据)一般存储在MySQL上
+    SQl on hadoop：Hive、spark、impala  以方便移植到其他的架构上
+
+
+  hive的体系架构：
+        client：shell、thrift/jdbc(server/jdbc)、webUI(HUE/Zeppelin)
+
+        metastore： ==> mysql
+            database --> name、location、owner ...
+            table --> name、location、owner、column name\type ...
+
+    sql 从客户端过来，通过driver，通过语法树解析成逻辑执行计划，最后翻译成MapReduce，
+    提交到yarn上面去运行。
+
+    hive  是一个客户端，并不涉及集群
+
+
+
+
