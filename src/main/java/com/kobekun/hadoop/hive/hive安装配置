@@ -1,6 +1,7 @@
 
 
 部署：前提安装一个mysql数据库  yum install mysql数据库
+        https://www.cnblogs.com/julyme/p/5969626.html
     1) 下载
     2)  解压到 ~/app
     3)  添加HIVE_HOME到系统环境变量中
