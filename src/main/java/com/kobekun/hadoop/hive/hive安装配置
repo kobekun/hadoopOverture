@@ -1,0 +1,44 @@
+
+
+部署：前提安装一个mysql数据库  yum install mysql数据库
+    1) 下载
+    2)  解压到 ~/app
+    3)  添加HIVE_HOME到系统环境变量中
+    4)  修改
+            hive-env.sh  --> 环境变量
+            hive-site.sh:
+
+            <?xml version="1.0"?>
+            <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+            <configuration>
+            <property>
+              <name>javax.jdo.option.ConnectionURL</name>
+              <value>jdbc:mysql://hadoop000:3306/hadoop_hive?createDatabaseIfNotExist=true</value>
+            </property>
+
+            <property>
+              <name>javax.jdo.option.ConnectionDriverName</name>
+              <value>com.mysql.jdbc.Driver</value>
+            </property>
+
+            <property>
+              <name>javax.jdo.option.ConnectionUserName</name>
+              <value>root</value>
+            </property>
+
+            <property>
+              <name>javax.jdo.option.ConnectionPassword</name>
+              <value>root</value>
+            </property>
+            </configuration>
+       5) 将mysql 驱动jar包放到hive的lib目录下 mysql-connector-java-5.1.27-bin.jar
+
+
+
+
+
+
+
+
+
