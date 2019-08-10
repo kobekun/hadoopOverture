@@ -1,0 +1,61 @@
+
+managed_table：内部表
+删除表：hdfs上的数据被删除 & meta也被删除
+
+external_table: 外部表
+hdfs 上的数据(真正的表数据)不被删除 & meta数据被删除
+如果重新创建表，可以select查到
+
+   外部表创建
+   create external table emp_kobekun_external(
+               empno int,
+               ename string,
+               job string,
+               mgr int,
+               hiredate string,
+               sal double,
+               comm double,
+               deptno int
+   ) row format delimited fields terminated by '\t'
+   location '/external/emp_kobekun/';
+
+   加载数据
+   load data local inpath '/home/hadoop/data/emp.txt'
+                           overwrite into table emp_kobekun_external;
+
+   desc formatted emp_kobekun_external;
+   table type --> external_table
+
+select * from TBLS \G;
+    table type --> external_table
+
+
+    drop table emp_kobekun_external;  drop之后再mysql数据库或者hive中查不到表，
+    但是在hdfs上是由数据的
+
+
+
+    分区表
+
+    create external table track_info_kobekun(
+        ip string,
+        country string,
+        province string,
+        city string,
+        url string,
+        page string
+    ) partitioned by (day string)
+    row format delimited fields terminated by '\t'
+    location '/project/track_info_kobekun';
+
+
+
+
+
+
+
+
+
+
+
+
