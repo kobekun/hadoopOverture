@@ -1,0 +1,6 @@
+
+create table helloworld1(id int, name String)
+row format delimited fields terminated by '\t';
+
+load data local inpath '/home/hadoop/data/helloworld.txt'
+overwrite into table helloworld1;
