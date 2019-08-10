@@ -1,0 +1,149 @@
+
+hive数据结构/抽象
+
+    database            HDFS一个目录
+        table           HDFS一个目录
+            data 文件
+            partition  分区表  HDFS一个目录
+                data 文件
+                bucket  HDFS一个文件
+
+/user/hive/warehouse是hive默认存储在hdfs上的路径
+hive1.db创建的一个数据库   ---> 文件夹
+
+    CREATE (DATABASE|SCHEMA) [IF NOT EXISTS] database_name
+      [COMMENT database_comment]
+      [LOCATION hdfs_path]
+      [WITH DBPROPERTIES (property_name=property_value, ...)];
+
+    中括号中可写可不写
+    create database IF NOT EXISTS hive1;
+
+    create database if not exists hive2 location '/test/location';
+
+    create database if not exists hives with dbproperties('creator'='kobekun');
+
+    hive> desc database hive2;
+    OK
+    hive2           hdfs://hadoop000:8020/test/location     hadoop  USER
+    Time taken: 0.027 seconds, Fetched: 1 row(s)
+    hive> desc database extended hives;
+    OK
+    hives           hdfs://hadoop000:8020/user/hive/warehouse/hives.db      hadoop  USER    {creator=kobekun}
+
+    查看命令行所在数据库
+    hive> set hive.cli.print.current.db;
+    hive.cli.print.current.db=false
+    hive> set hive.cli.print.current.db=true;
+    hive (default)>
+
+    删除数据库
+    drop database hive2 cascade;  ---> 删除库的时候把表级联删除(慎重操作)
+
+    show  databases like 'hive*';
+
+    表的操作：
+        create table emp_kobekun(
+            empno int,
+            ename string,
+            job string,
+            mgr int,
+            hiredate string,
+            sal double,
+            comm double,
+            deptno int
+        ) row format delimited fields terminated by '\t';
+
+        desc extended emp_kobekun; 查看表的位置
+        desc formatted emp_kobekun; 更好看
+
+        加载数据进表里面：load data local inpath '/home/hadoop/data/emp.txt'
+                        overwrite into table emp_kobekun;
+        更改表名：alter table emp_kobekun rename to emp2_kobekun;
+
+        local 本地系统，如果没有local，指的就是hdfs的路径
+        overwrite 是否数据覆盖，如果没有那么就是数据追加
+
+        load data inpath 'hdfs://hadoop000:8020/data/emp.txt'
+                                 into table emp_kobekun;
+
+        create table emp2_kobekun as select * from emp_kobekun;
+
+        insert overwrite local directory '/tmp/hive/'
+        row format delimited fields terminated by '\t'
+        select empno,name,sal,deptno from emp_kobekun;
+
+
+ 涉及统计操作的  都是要跑MapReduce作业的  select count(*) from dept where deptno=10;
+
+        聚合函数，count 都需要跑MapReduce作业
+
+        聚合函数
+        select max(sal),min(min),sum(sal),avg(sal) from emp;
+
+        分组函数 group by
+
+        求每个部门的平均工资
+        select deptno,avg(sal) from emp group by deptno;
+
+        出现在select中的字段，如果没有出现在聚合函数里，那么一定要出现在group by 中
+
+
+        求每个部门、工作岗位的平均工资
+        select deptno,job,avg(sal) from emp group by deptno,job;
+
+        求每个部门的平均工资大于2000的部门
+        select deptno,avg(sal) avg_sal from emp group by deptno where avg_sal>2000;  ---> XXXX
+
+        对于分组函数过滤要使用having
+        select deptno,avg(sal) avg_sal from emp group by deptno having avg_sal>2000;
+
+
+        create table dept(
+        	deptno int,
+        	dname string,
+        	loc string
+        ) row format delimited fields terminated by '\t';
+
+        load data local inpath '/home/hadoop/data/dept.txt' overwrite into table dept;
+
+
+        select e.empno,e.ename,e.sal,e.deptno,d.dname from emp e join dept d  on e.deptno=d.deptno;
+
+        explain select e.empno,e.ename,e.sal,e.deptno,d.dname from emp e join dept d  on e.deptno=d.deptno;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
