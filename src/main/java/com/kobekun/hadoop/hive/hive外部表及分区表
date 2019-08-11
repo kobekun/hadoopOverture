@@ -47,15 +47,66 @@ select * from TBLS \G;
     ) partitioned by (day string)
     row format delimited fields terminated by '\t'
     location '/project/track_info_kobekun';
+	
+创建表时字段前面不能有空格	
+create external table track_info_kobekun(
+country string,
+province string,
+city string,
+ip string,
+url string,
+sessionid string,
+time string,
+page string
+) partitioned by (day string)
+row format delimited fields terminated by '\t'
+location '/project/track_info_kobekun';
+
+load data inpath 'hdfs://hadoop000:8020/project/input/etl/part-r-00000' overwrite into table track_info_kobekun partition(day='2013-07-21');
+该partition会自动加到hdfs的目录
+
+desc formatted track_info_kobekun;
+
+select * from track_info_kobekun where day='2013-07-21' and page is not null limit 20;
+select * from track_info_kobekun where day='2013-07-21' and page <> '-' limit 20;
+
+课程：
+CREATE EXTERNAL TABLE emp_external(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+location '/external/emp/';
 
 
 
 
+select province,count(*) from track_info_kobekun where day='2013-07-21' group by province;
+
+create table track_info_province_stat_kobekun(
+province string,
+cnt bigint
+)partitioned by(day string)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+insert overwrite table track_info_province_stat_kobekun partition(day='2013-07-21')
+select province,count(*) from track_info_kobekun where day='2013-07-21' group by province;
+
+统计的数据在track_info_province_stat_kobekun，而且这个表是一个分区表，后续统计报表的数据可以直接从这个表中查询
+也可以将hive表中的数据导出到RDBMS中。
 
 
 
+总结：
+1) ETL
+2) 把etl的数据加载到track_info分区表中
+3) 各个维度统计结果的数据加载到各自维度的表里(track_info_province_stat_kobekun)
+4) 将数据导出(可选)
 
 
-
-
-
+如果一个框架不能落地到SQL层面，这个框架就不是一个非常合适的框架***************
+方便运维，方便用户，运维人员和用户不可能去写mapreduce或者spark去查询统计什么东西
