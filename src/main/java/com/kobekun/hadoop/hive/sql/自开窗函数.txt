@@ -1,0 +1,14 @@
+create table windowfunc(YF string,RQ String,SUDO int)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+
+load data inpath '/kobekun/accumulate.txt' into table windowfunc;
+
+select yf,rq,sudo,sum(sudo) over (partition by yf order by rq) as sumsudo from windowfunc; 
+
+select yf,rq,sudo,sum(sudo) over (partition by yf order by rq) as sumsudo ,
+sum(sudo) over (partition by yf order by rq rows between unbounded preceding and current row) as sumsudo1 from windowfunc;
+
+select yf,rq,sudo,sum(sudo) over (partition by yf order by rq) as sumsudo ,
+sum(sudo) over (partition by yf order by rq rows between unbounded preceding and current row) as sumsudo1, 
+sum(sudo) over (partition by yf order by rq rows between 2 preceding and current row) as sumsudopreceding2
+from windowfunc;

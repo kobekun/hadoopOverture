@@ -1,0 +1,92 @@
+窗口分析函数
+	聚合函数：多行数据按照规则进行聚合为一行
+	要做聚合，而且要返回的结果不仅仅是一行
+	==> 窗口
+	分组求TopN
+		统计域名下对应的路径访问量(count(path))最高的Top N
+		ruozedata.com
+			/path1   100
+			/path2   99
+			..
+			/path100
+		ruoze.ke.qq.com
+			/path1
+			/path2
+			..
+			/path1000
+		bilibili.com
+			/path1
+			/path2
+			..
+			/path10
+
+	 count(path) cnts group by domain  
+	
+	 窗口： domain就是一个窗口(window)，  <== 开窗函数
+			再窗口的基础上做统计分析(sum avg rank..)
+			窗口函数对其所作用的窗口中的每一条记录输出一条结果
+			借助于over()函数进行开窗
+	 ==> 窗口分析函数
+
+
+	 
+	 
+	 
+select domain,time,traffic,
+sum(traffic) OVER (PARTITION BY domain order by time) pv1,
+sum(traffic) OVER (PARTITION BY domain order by time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) pv2,
+sum(traffic) OVER (PARTITION BY domain order by time ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) pv3,
+sum(traffic) OVER (PARTITION BY domain order by time ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) pv4,
+sum(traffic) OVER (PARTITION BY domain order by time ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) pv5
+from ruozedata_window;	 
+	 
+NTILE(num) 将分组数据按照顺序进行切成num片
+ROW_NUMBER
+	从1开始，按照顺序，生成分组内记录的序号
+RANK
+	分组内生成编号  排名相同的名次留空位
+DENSE_RANK	 
+	分组内生成编号
+
+CUME_DIST    
+	小于等于当前行值的行数 / 分组内的总行数
+PERCENT_RANK
+	分组内当前行的rank -1 / 分组内总行数 - 1
+
+emp表
+按照sal从高到低排序，算出来人和上一个人的薪资差	
+	
+LAG(col,n,default)
+	窗口内往上取N行的值  
+	如果有设置default到取default
+	如果没有设置default就取NULL
+
+LEAD(col,n,default)
+	往下取
+	
+	
+	
+	
+	
+	
+	
+	
+http://domain/path?params	
+
+domain
+province
+	
+ETL==> ODS <== + userid	<== 
+	
+一个用户：多个域名的
+userid ==> domain 映射表  MySQL
+
+求：每个用户下所有域名的 ...	
+	
+MySQL ==> SQOOP ==> Hive
+	
+==> 基于用户维度的统计分析	
+	
+调优
+
+JVM重用

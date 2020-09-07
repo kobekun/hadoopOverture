@@ -1,0 +1,57 @@
+pk,20210801
+pk,20210802
+pk,20210803
+pk,20210804
+pk,20210806
+pk,20210807
+pk,20210808
+pk,20210811
+pk,20210812
+ruoze,20210730
+ruoze,20210731
+ruoze,20210801
+ruoze,20210804
+ruoze,20210806
+
+
+4) 求年度[?]最大连续登陆天数
+
+create table login (
+name string,
+day string
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/kobekun/data/login.txt' into table  login;
+
+hive 中不支持dayofyear函数  sparksql支持
+
+select name,day, row_number() over (partition by name order by day) ,
+dayofyear(from_unixtime(unix_timestamp(day,'yyyyMMdd'),'yyyy-MM-dd')) 
+from login; 
+
+
+val sql =
+      """
+        |select name,day, row_number() over (partition by name order by day) as num,
+        |dayofyear(from_unixtime(unix_timestamp(day,'yyyyMMdd'),'yyyy-MM-dd'))  as whichday
+        |from ruozedata_spark.login
+        |""".stripMargin
+		
+spark.sql(sql).show
+
+val sql2 =
+      """
+        |
+        |select c.name,max(cnt) maxcnt from(
+        |select b.name,b.cha,count(1) cnt from (
+        |select a.name,a.day,a.whichday-a.num as cha from (
+        |select name,day, row_number() over (partition by name order by day) as num,
+        |        dayofyear(from_unixtime(unix_timestamp(day,'yyyyMMdd'),'yyyy-MM-dd'))  as whichday
+        |        from ruozedata_spark.login
+        |) a
+        |) b group by b.name,b.cha
+        |) c group by c.name
+        |
+        |""".stripMargin
+
+spark.sql(sql2).show

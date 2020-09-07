@@ -1,0 +1,43 @@
+hive中不建议使用json
+
+
+SQL：排序问题
+
+order by
+	order by col1,col2 asc/desc  全局排序  只能有一个reduce作业  
+	hive.mapred.mode   2.x strict  1.x nonstrict    严格模式必须指定limit
+	如果是严格模式strict
+		普通表： order by  + limit
+		分区表： order by  + limit  where partition column
+	
+sort by
+	能保证每个分区有序
+	几个reduce作业，每个reduce输出结果有序
+	不受strict影响
+	col可以是多个
+		数值类型==>数字
+		字符串类型==>字典
+
+	mapred.reduce.tasks=-1 默认  自动  可以设置为别的值
+	mapred.reduce.tasks=3
+	insert overwrite	local directory '/home/kobekun/app/hadoop/sortbytmp/' select * from emp sort by empno;
+	
+	补充：MR中多少reduce作业对应多少个文件
+		  spark中有多少task就有多少个文件
+
+distribute by
+	+ col  根据指定的字段把数据分发到不同的reduce上去
+	相当于MR中的partitioner
+	通常和sort by用在一起
+	insert overwrite	local directory '/home/kobekun/app/hadoop/distributebytmp/' select * from emp distribute by length(ename) sort by empno;
+	
+cluster by 
+	cluster by col相当于distribute by col sort by col;
+	insert overwrite	local directory '/home/kobekun/app/hadoop/clusterbytmp/' select * from emp cluster by ename;
+
+by总结
+	order by	 全局有序 一个reduce 大数据量下效率低下
+	sort by 	每个reduce内有序，不能保证全局有序
+	distribute by  
+	
+	需求：order by 全局，sort by 用不了全局怎么搞？

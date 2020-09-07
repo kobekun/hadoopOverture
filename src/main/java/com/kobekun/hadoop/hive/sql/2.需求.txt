@@ -1,0 +1,448 @@
+1.GMV销售成交总金额
+2.最近6个月每天采购总金额、商品SKU总量
+3.最近6个月每天销售总金额、商品SKU总量
+4.销售总价Top 3的商品是哪些
+5.一级类别的哪个商品是最畅销的
+6.各个供应商供应的货款最大的是哪个商品
+7.各个客户最喜欢买的商品是哪个
+8.2019每个月的各商品各仓库的采购、销售的数量
+格式参考图片
+
+9.最近30天的每天每小时订单总量(含退货)、退货订单总量
+10.每天各仓库的盘点时，订单总量(含退货)、退货订单总量、商品总量、总价
+
+
+说明:
+type是一级类别，subtype是二级类别
+需要拼接作为筛选条件:
+CONCAT_WS('-',`type`,subtype)
+
+状态:
+进库:
+'入库-采购','出库-采购退货','入库-其它','入库-零售退货'
+
+出库:
+'出库-销售','入库-销售退货','出库-其它','出库-零售'
+
+----------------------------------------------------------------------------------
+
+1、GMV销售成交总金额
+（出库销售的金额+零售出库的金额+其他销售订单的金额）-（销售退货+零售退货）
+drop table ruozedata_erp.ads_bill_sale_moneysum;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_sale_moneysum(
+bill_sale_moneysum double
+) COMMENT 'GMV销售成交总金额'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_sale_moneysum
+select s.sale_out-p.sale_in 
+from
+(select sum(allprice) as sale_out
+from ruozedata_erp.dws_ruozedata_bill
+where concat_ws('-',`type`,subtype) in ('出库-销售','出库-零售','其它-销售订单')) as s,
+(select sum(allprice) as sale_in
+from ruozedata_erp.dws_ruozedata_bill
+where concat_ws('-',`type`,subtype) in ('入库-零售退货','入库-销售退货')) as p;
+
+--------------------------------------------------------------------
+2、最近6个月每天采购总金额、商品SKU总量
+入库的采购金额+其他的采购订单-出库的采购退货金额=采购总金额
+入库的采购数量+其他的采购数量-出库的采购退货数量=采购总量
+
+drop table ruozedata_erp.ads_bill_purchase_sum_count_by_day_last6months;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_purchase_sum_count_by_day_last6months(
+cday string,
+bill_purchase_moneysum double,
+bill_purchase_count bigint
+) COMMENT '最近6个月每天采购总金额、商品SKU总量'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_purchase_sum_count_by_day_last6months
+select 
+		h.cday,
+		c.allprice,
+		c.opernumber
+	from 
+	(
+	select DISTINCT(concat_ws('-',y,m,d)) as cday
+	from dwd_dim_time
+	where 
+	datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))<=180 and datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))>=0
+	) h
+		left join
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			sum(if(CONCAT_WS('-',`type`,subtype) in ('入库-采购','其它-采购订单'),allprice,-allprice)) as allprice,
+			sum(if(CONCAT_WS('-',`type`,subtype) in ('入库-采购','其它-采购订单'),opernumber,-opernumber)) as opernumber
+							
+		from ruozedata_erp.dws_ruozedata_bill
+		where concat_ws('-',`type`,subtype) in ('入库-采购','其它-采购订单','出库-采购退货')
+		group by substr(createtime,1,10)
+	) c on h.cday=c.cday;
+---------------------------------------------------------------------
+3、最近6个月每天销售总金额、商品SKU总量
+（出库销售的金额+零售出库的金额+其他销售订单的金额）-（销售退货金额+零售退货金额）=销售总金额
+（出库销售的数量+零售出库的数量+其他销售订单的数量）-（销售退货数量+零售退货数量）=销售总量
+
+drop table ruozedata_erp.ads_bill_sale_sum_count_by_day_last6months;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_sale_sum_count_by_day_last6months(
+cday string,
+bill_purchase_moneysum double,
+bill_purchase_count bigint
+) COMMENT '最近6个月每天销售总金额、商品SKU总量'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_sale_sum_count_by_day_last6months
+select 
+		h.cday,
+		c.allprice,
+		c.opernumber
+	from 
+	(
+	select DISTINCT(concat_ws('-',y,m,d)) as cday
+	from dwd_dim_time
+	where 
+	datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))<=180 and datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))>=0
+	) h
+		left join
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			sum(if(CONCAT_WS('-',`type`,subtype) in ('出库-销售','出库-零售','其它-销售订单'),allprice,-allprice)) as allprice,
+			sum(if(CONCAT_WS('-',`type`,subtype) in ('出库-销售','出库-零售','其它-销售订单'),opernumber,-opernumber)) as opernumber
+							
+		from ruozedata_erp.dws_ruozedata_bill
+		where concat_ws('-',`type`,subtype) in ('出库-销售','出库-零售','其它-销售订单','入库-零售退货','入库-销售退货')
+		group by substr(createtime,1,10)
+	) c on h.cday=c.cday;
+-----------------------------------------------------------------------
+4、销售总价Top 3的商品是哪些
+drop table ruozedata_erp.ads_bill_sale_moneysum_top3;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_sale_moneysum_top3(
+materialname string,
+bill_sale_moneysum double
+) COMMENT '销售总价Top 3的商品'
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_sale_moneysum_top3
+select *
+from
+(select materialname,	
+round(sum(allprice),2) as bill_sale_moneysum
+from ruozedata_erp.dws_ruozedata_bill
+where concat_ws("-",`type`,subtype) in ('出库-销售','出库-零售','出库-其它','其它-销售订单')
+group by materialname) t
+order by t.bill_sale_moneysum  desc limit 3;
+-----------------------------------------------------------
+
+5、一级类别的哪个商品是最畅销的
+drop table ruozedata_erp.ads_bill_sale_firstcategory_moneysum_most_top1material;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_sale_firstcategory_moneysum_most_top1material(
+firstcategory string,
+materialname string,
+bill_sale_moneysum double
+) COMMENT '最畅销的一级类别的商品'
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table  ruozedata_erp.ads_bill_sale_firstcategory_moneysum_most_top1material
+select n.firstcategory,n.materialname,n.bill_sale_moneysum
+from 
+(
+	select m.*, row_number() over (partition by firstcategory order by bill_sale_moneysum desc ) num
+	from 
+	(
+	select firstcategory,materialname,	
+	round(sum(allprice),2) as bill_sale_moneysum
+	from ruozedata_erp.dws_ruozedata_bill
+	where concat_ws("-",`type`,subtype) in ('出库-销售','出库-零售','出库-其它','其它-销售订单')
+	group by firstcategory,materialname) m
+) n where n.num = 1;
+
+----------------------------------------------------------------------
+
+6、各个供应商供应的货款最大的是哪个商品
+drop table ruozedata_erp.ads_bill_supplier_moneysum_top1material;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_supplier_moneysum_top1material(
+supplier string,
+materialname string,
+bill_sale_moneysum double
+) COMMENT '各个供应商供应的货款最大的商品'
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table  ruozedata_erp.ads_bill_supplier_moneysum_top1material
+select n.supplierorcustomer,n.materialname,n.bill_sale_moneysum
+from 
+(
+	select m.*, row_number() over (partition by supplierorcustomer order by bill_sale_moneysum desc ) num
+	from 
+	(
+	select supplierorcustomer,materialname,	
+	round(sum(allprice),2) as bill_sale_moneysum
+	from ruozedata_erp.dws_ruozedata_bill
+	where concat_ws("-",`type`,subtype) in ('入库-采购','入库-其它','其它-采购订单')
+	and supplierorcustomertype="供应商"
+	group by supplierorcustomer,materialname) m
+) n where n.num = 1;
+
+--------------------------------------------------------
+
+7.各个客户最喜欢买的商品是哪个
+drop table ruozedata_erp.ads_bill_customer_moneysum_top1material;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_customer_moneysum_top1material(
+customer string,
+materialname string,
+bill_sale_moneysum double
+) COMMENT '各个客户最喜欢买的商品'
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table  ruozedata_erp.ads_bill_customer_moneysum_top1material
+select n.supplierorcustomer,n.materialname,n.bill_sale_moneysum
+from 
+(
+	select m.*, row_number() over (partition by supplierorcustomer order by bill_sale_moneysum desc ) num
+	from 
+	(
+	select supplierorcustomer,materialname,	
+	round(sum(allprice),2) as bill_sale_moneysum
+	from ruozedata_erp.dws_ruozedata_bill
+	where concat_ws("-",`type`,subtype) in ('出库-销售','出库-零售','出库-其它','其它-销售订单')
+	and supplierorcustomertype in('客户','会员')
+	group by supplierorcustomer,materialname) m
+) n where n.num = 1;
+
+----------------------------------------------------------------------
+
+8.2019每个月的各商品各仓库的采购、销售的数量
+
+drop table ruozedata_erp.ads_bill_purchase_sale_count_by_month_year2019;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_purchase_sale_count_by_month_year2019(
+materialname string,
+depotname string,
+billtype string,
+yearname string,
+m01 bigint,
+m02 bigint,
+m03 bigint,
+m04 bigint,
+m05 bigint,
+m06 bigint,
+m07 bigint,
+m08 bigint,
+m09 bigint,
+m10 bigint,
+m11 bigint,
+m12 bigint
+) COMMENT '2019每个月的各商品各仓库的采购、销售的数量'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_purchase_sale_count_by_month_year2019
+select m.materialname,m.depotname,m.billtype,
+	'2019' as yearname,
+	max(case when m.monthname='2019-01' then m.amout else 0 end) m01,
+	max(case when m.monthname='2019-02' then m.amout else 0 end) m02,
+	max(case when m.monthname='2019-03' then m.amout else 0 end) m03,
+	max(case when m.monthname='2019-04' then m.amout else 0 end) m04,
+	max(case when m.monthname='2019-05' then m.amout else 0 end) m05,
+	max(case when m.monthname='2019-06' then m.amout else 0 end) m06,
+	max(case when m.monthname='2019-07' then m.amout else 0 end) m07,
+	max(case when m.monthname='2019-08' then m.amout else 0 end) m08,
+	max(case when m.monthname='2019-09' then m.amout else 0 end) m09,
+	max(case when m.monthname='2019-10' then m.amout else 0 end) m10,
+	max(case when m.monthname='2019-11' then m.amout else 0 end) m11,
+	max(case when m.monthname='2019-12' then m.amout else 0 end) m12
+	
+from 
+(
+select '采购' as billtype,
+		substr(createtime,0,7) as monthname,
+		materialname,depotname,
+		sum(opernumber) as amout
+	from ruozedata_erp.dws_ruozedata_bill
+	where concat_ws('-',`type`,subtype) in ('入库-采购','其它-采购订单','入库-其它')
+	and year(createtime)='2019'
+	group by substr(createtime,0,7),materialname,depotname
+union all
+select '销售' as billtype,
+		substr(createtime,0,7) as monthname,
+		materialname,depotname,
+		sum(opernumber) as amout
+	from ruozedata_erp.dws_ruozedata_bill
+	where concat_ws('-',`type`,subtype) in ('出库-销售','出库-零售','出库-其它')
+	and year(createtime)='2019'
+	group by substr(createtime,0,7),materialname,depotname
+) m 
+group by m.materialname,m.depotname,m.billtype;
+
+------------------------------------------------------
+
+9、最近40天的每天每小时订单总量(含退货)、退货订单总量
+
+drop table ruozedata_erp.ads_bill_sum_count_by_day_hour_last40days;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_sum_count_by_day_hour_last40days(
+chour string,
+bill_count bigint,
+bill_return_count bigint
+) COMMENT '最近40天的每天每小时订单总量(含退货)、退货订单总量'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_sum_count_by_day_hour_last40days
+select concat(m.chour,':00:00') as chour,
+		m.bill_count,m.bill_return_count
+from
+(
+select 
+		h.chour,
+		c.bill_count,
+		d.bill_return_count
+	from 
+	(
+	select concat_ws(' ',concat_ws('-',y,m,d),h) as chour
+	from dwd_dim_time
+	where 
+	datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))<=40 and datediff(CURRENT_TIMESTAMP,concat_ws('-',y,m,d))>=0
+	) h
+		left join
+	(
+		select 
+			substr(createtime,1,13) as chour,
+			count(distinct number) as bill_count
+			from ruozedata_erp.dws_ruozedata_bill
+		group by substr(createtime,1,13)
+	) c on h.chour=c.chour
+		left join
+	(
+		select 
+			substr(createtime,1,13) as chour,
+			count(distinct number) as bill_return_count
+			from ruozedata_erp.dws_ruozedata_bill
+		where subtype like '%退货%'
+		group by substr(createtime,1,13)
+	) d on h.chour=d.chour
+) m;
+------------------------------------------------------------------
+
+10.每天各仓库的盘点时，订单总量(含退货)、退货订单总量、商品总量、总价
+
+drop table ruozedata_erp.ads_bill_count_by_day;
+CREATE TABLE IF NOT EXISTS ruozedata_erp.ads_bill_count_by_day(
+cday string,
+bill_count bigint,
+bill_return_count bigint,
+bill_sku_sum bigint,
+bill_sku_allprice double
+) COMMENT '每天订单总量(含退货)、退货订单总量、商品总量、总价'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+insert overwrite table ruozedata_erp.ads_bill_count_by_day
+select 
+	h.cday,h.bill_count,d.bill_return_count,e.bill_sku_sum,f.bill_sku_allprice
+from
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			count(distinct number) as bill_count
+			from ruozedata_erp.dws_ruozedata_bill
+		group by substr(createtime,1,10)
+	) h
+	left join
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			count(distinct number) as bill_return_count
+			from ruozedata_erp.dws_ruozedata_bill
+		where subtype like '%退货%'
+		group by substr(createtime,1,10)
+	) d on h.cday=d.cday
+	left join 
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			sum(opernumber) as bill_sku_sum
+			from ruozedata_erp.dws_ruozedata_bill
+		group by substr(createtime,1,10)
+	) e on h.cday=e.cday
+	left join 
+	(
+		select 
+			substr(createtime,1,10) as cday,
+			sum(allprice) as bill_sku_allprice
+			from ruozedata_erp.dws_ruozedata_bill
+		group by substr(createtime,1,10)
+	) f on h.cday=f.cday;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

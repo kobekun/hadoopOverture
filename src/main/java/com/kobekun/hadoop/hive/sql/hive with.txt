@@ -1,0 +1,200 @@
+ruoze	english:100,math:90,sport:80
+pk	english:99,math:80,sport:85
+xingxing	english:99,math:62,sport:88
+
+
+create table stu_score(
+name string,
+score map<string,int>
+)row format delimited fields terminated by '\t'
+collection items terminated by ','
+map keys terminated by ':';
+
+
+load data local inpath '/home/kobekun/data/stu_score.txt' into table stu_score;
+
+select name,score["english"] english,score["math"] math,score["sport"] sport from stu_score;
+
+下面语句在spark-sql中支持在hive中不支持
+select
+name,
+explode(score) as (course,score)
+from
+stu_score;
+
+
+select
+name,t.course,t.score
+from
+stu_score ss 
+lateral view explode(ss.score) t as course,score;
+
+
+每个学生成绩最好的课程和分数，最差的课程和分数、平均分
+
+两种写法
+
+select a.name,b.course,b.score,a.avg_score
+from
+(
+select
+name,max(t.score) max_score,min(t.score) min_score, avg(t.score) avg_score
+from
+stu_score ss 
+lateral view explode(ss.score) t as course,score
+group by ss.name
+) a join 
+(
+select
+name,t.course,t.score
+from
+stu_score ss 
+lateral view explode(ss.score) t as course,score
+) b on a.name=b.name and (a.max_score = b.score or a.min_score = b.score);
+=================================================================================
+
+create table result_tmp
+with
+a as (select name,max(t.score) max_score,min(t.score) min_score, avg(t.score) avg_score from stu_score ss lateral view explode(ss.score) t as course,score group by ss.name),
+b as (select name,t.course,t.score from stu_score ss  lateral view explode(ss.score) t as course,score)
+select a.name,b.course,b.score,a.avg_score
+from a join b 
+on a.name=b.name and (a.max_score = b.score or a.min_score = b.score);
+-------------------------------------------------------------------------
+select
+d.name,d.avg_score,
+split(course_score[0],'-')[0] as min_course,
+split(course_score[0],'-')[1] as min_score,
+split(course_score[1],'-')[0] as max_course,
+split(course_score[1],'-')[1] as max_score
+from 
+(
+select 
+c.name,c.avg_score,collect_list(concat_ws("-",c.course,cast(c.score as string))) as course_score
+from 
+result_tmp c
+group by c.name,c.avg_score
+) d;
+
+
+
+每个域名截止到每月     最大访问次数    累计到月的最大访问次数
+
+ruozedata.com,2020-01-02,5
+ruozedata.com,2020-01-03,15
+ruozedata.com,2020-01-04,8
+ruozedata.com,2020-01-05,5
+ruozedata.com,2020-02-01,4
+ruozedata.com,2020-02-02,6
+ruozedata.com,2020-03-01,16
+ruozedata.com,2020-03-02,22
+
+						sum	max	sum
+ruozedata.com	2020-01	33	33	33
+ruozedata.com	2020-02	10	33	43
+ruozedata.com	2020-03	38	38	81
+
+
+create table access(
+domain string,
+day string,
+pv int
+)
+row format delimited fields terminated by ',';
+
+load data local inpath '/home/kobekun/data/access_stat.txt' into table access;
+
+==============================================================
+
+create table access_tmp1
+select 
+domain,month,pv,
+max(pv) over (partition by domain order by month rows between unbounded preceding and current row)  as max_pv,
+sum(pv) over (partition by domain order by month rows between unbounded preceding and current row)  as sum_pv
+from 
+(select 
+domain,date_format(day,'yyyy-MM') month, sum(pv) pv
+from
+access
+group by domain,date_format(day,'yyyy-MM')
+);
+===========================================================
+*****************************************************************************
+select t.b_domain,t.b_month,t.b_pv,max(t.a_pv) max_pv,sum(t.a_pv) sum_pv
+from
+(
+select 
+a.domain a_domain,a.month a_month,a.pv a_pv,
+b.domain b_domain,b.month b_month,b.pv b_pv
+from
+(
+select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM')
+) a join 
+(
+select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM')
+) b
+on a.domain=b.domain where a.month<=b.month
+) t group by t.b_domain,t.b_month,t.b_pv
+order by t.b_domain desc, t.b_month;
+***********************************************************************
+
+select b.domain domain,b.month month,b.pv pv,max(a.pv) max_pv,sum(a.pv) sum_pv
+from
+(
+select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM')
+) a join 
+(
+select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM')
+) b
+on a.domain=b.domain where a.month<=b.month
+group by b.domain,b.month,b.pv
+order by b.domain desc, b.month;
+********************************************
+with 
+a as (select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM')),
+b as (select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM'))
+select b.domain domain,b.month month,b.pv pv,max(a.pv) max_pv,sum(a.pv) sum_pv
+from a join b
+on a.domain=b.domain where a.month<=b.month
+group by b.domain,b.month,b.pv
+order by b.domain desc, b.month;
+*****************************************************
+with 
+t as (select domain,date_format(day,'yyyy-MM') month, sum(pv) pv from access group by domain,date_format(day,'yyyy-MM'))
+select b.domain domain,b.month month,b.pv pv,max(a.pv) max_pv,sum(a.pv) sum_pv
+from t a join t b
+on a.domain=b.domain where a.month<=b.month
+group by b.domain,b.month,b.pv
+order by b.domain desc, b.month;                        <-----------
+*********************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

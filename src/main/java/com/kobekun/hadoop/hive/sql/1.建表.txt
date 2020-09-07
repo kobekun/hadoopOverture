@@ -1,0 +1,62 @@
+--1.维度表
+CREATE DATABASE ruozedata_erp;
+
+CREATE TABLE IF NOT EXISTS ruozedata_erp.dwd_ruozedata_depot ( 
+id BIGINT, name STRING, address STRING, warehousing DOUBLE, truckage DOUBLE, 
+type INT, sort STRING, remark STRING, principal BIGINT, tenant_id BIGINT, 
+delete_Flag STRING, is_default BOOLEAN, 
+UpdateTime STRING,
+StartDay string comment '数据起始时间',
+EndDay string comment '数据结束时间'
+) COMMENT '仓库维度表'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+create table  ruozedata_erp.dwd_dim_time(
+time_id string,
+y string,
+m string,
+d string,
+h string,
+hour_period string,
+week_of_year string,
+week_of_month string,
+week_day  string,
+ten_days string,
+quarter_of_year string,
+is_holiday BOOLEAN,
+is_festival BOOLEAN
+)COMMENT '时间维度表'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+--2.事实大宽明细表
+CREATE TABLE ruozedata_erp.dws_ruozedata_bill (
+id bigint,
+itemid bigint,
+DepotId bigint,
+depotName string,
+`type` string,
+subtype string,
+`number` string,
+MaterialId bigint,
+materialName string,
+OperNumber double,
+UnitPrice double,
+AllPrice double,
+SafetyStock double,
+SecondCategory string,
+firstCategory string,
+OrganId bigint ,
+supplierOrCustomer string, 
+supplierOrCustomerType string,
+CreateTime string
+)COMMENT '订单轻度汇总表'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;

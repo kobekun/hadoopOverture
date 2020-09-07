@@ -1,0 +1,288 @@
+
+
+DDL：
+
+create table emp(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) row format delimited fields terminated  by '\t';
+
+load data inpath '/kobekun/emp.txt' into table emp;   加载完数据后，该文件被删除(内部表的生命周期交给hive处理)
+
+hive (ruozedata_hive)> load data inpath '/kobekun/emp.txt' into table emptest;
+FAILED: SemanticException Line 1:17 Invalid path ''/kobekun/emp.txt'': No files matching path hdfs://ruozedata001:8020/kobekun/emp.txt
+
+create table emptest(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) row format delimited fields terminated  by ',';
+
+load data local inpath '/home/kobekun/app/hadoop/sbin/emp.txt' into table emptest;
+
+hive (ruozedata_hive)> select * from emptest;
+OK
+emptest.empno   emptest.ename   emptest.job     emptest.mgr     emptest.hiredate        emptest.sal     emptest.comm    emptest.deptno
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+NULL    NULL    NULL    NULL    NULL    NULL    NULL    NULL
+
+上面的情况是文件中字段之间的分隔符和表schema中的分隔符不一致导致
+
+
+create table emp2 like emp;  只复制表结构，不复制数据
+
+
+create table emp3 as select * from emp;  复制表结构和数据
+
+show tables 'emp*';
+
+show create table emp;
+
+hive (ruozedata_hive)> show create table emp;
+OK
+createtab_stmt
+CREATE TABLE `emp`(
+  `empno` int, 
+  `ename` string, 
+  `job` string, 
+  `mgr` int, 
+  `hiredate` string, 
+  `sal` double, 
+  `comm` double, 
+  `deptno` int)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' 
+WITH SERDEPROPERTIES ( 
+  'field.delim'='\t', 
+  'serialization.format'='\t') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'hdfs://ruozedata001:8020/user/hive/warehouse/ruozedata_hive.db/emp'
+TBLPROPERTIES (
+  'COLUMN_STATS_ACCURATE'='true', 
+  'numFiles'='1', 
+  'totalSize'='699', 
+  'transient_lastDdlTime'='1576733777')
+Time taken: 0.074 seconds, Fetched: 25 row(s)
+hive (ruozedata_hive)> 
+
+alter table emp3 rename to emp3_bak; 表改名
+
+desc formatted emp;查看表信息
+
+元数据表在hive-site中配置的  一般在mysql中
+
+
+外部表 
+create external table emp_external(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) row format delimited fields terminated  by '\t'
+location '/ruozedata/hive_external/emp/';
+
+内部表删除时，hdfs数据+meta被删除
+外部表删除时，hdfs数据不动，meta数据被删除
+
+内部表改外部表
+alter table emp_managed set tblproperties('EXTERNAL'='TRUE');
+
+外部表改内部表
+alter table emp_managed set tblproperties('EXTERNAL'='FALSE');
+
+
+从安全角度来说，一般会用外部表
+
+一天一个表 按天分区 log_20191230  time 创建索引
+
+分区表：分区其实对应的就是hdfs上的文件夹    SQL中的条件写了就到区分对应的文件夹中找
+如果不带分区，会全表扫描   磁盘io不是一个级别的
+
+
+create table order_partition(
+order_no string,
+event_name String
+)partitioned by (event_month string)
+row format delimited fields terminated by '\t';
+
+分区列并不是一个”真正“的表字段，其实是hdfs上表对应的文件夹下的文件夹。
+	
+分区表加载数据一定要加载分区字段
+
+load 数据会把元数据信息加载到mysql中
+load data local inpath '/home/kobekun/app/hadoop/sbin/order_created.txt' overwrite into table order_partition partition(event_month='2014-05');
+
+select * from order_partition where event_month='2014-05';
+
+
+对于分区表操作，如果数据是写入hdfs，默认SQL是查询不到的，为什么？
+因为元数据里没有。
+
+[kobekun@ruozedata001 sbin]$ hadoop fs -mkdir -p /user/hive/warehouse/ruozedata_hive.db/order_partition/event_month=2014-06
+19/12/19 15:03:32 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[kobekun@ruozedata001 sbin]$ hadoop fs -put emp.txt /user/hive/warehouse/ruozedata_hive.db/order_partition/event_month=2014-06/
+19/12/19 15:03:51 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[kobekun@ruozedata001 sbin]$ 
+
+hive (ruozedata_hive)> select * from order_partition where event_name='2014-06';
+OK
+order_partition.order_no        order_partition.event_name      order_partition.event_month
+Time taken: 0.077 seconds
+hive (ruozedata_hive)> 
+
+
+刷新元数据 msck repair table order_partition;  此动作在生产删一定不能用
+
+hive (ruozedata_hive)>  msck repair table order_partition;
+OK
+Partitions not in metastore:    order_partition:event_month=2014-06
+Repair: Added partition to metastore order_partition:event_month=2014-06
+Time taken: 0.18 seconds, Fetched: 2 row(s)
+hive (ruozedata_hive)>
+
+刷新分区的元数据用下面的
+alter table order_partition add  if not exists partition(event_month='2014-07');
+查询有哪些分区
+show partitions order_partition;
+
+mysql查元数据分区
+select * from partitions \G;
+
+单级分区  一层目录
+二级分区  二层目录
+create table order_mulit_partition(
+order_no string,
+event_name String
+)partitioned by (event_month string,step string)
+row format delimited fields terminated by '\t';
+
+load data local inpath '/home/kobekun/app/hadoop/sbin/order_created.txt' overwrite into table order_mulit_partition partition(event_month='2014-05',step='1');
+
+
+把deptno设为emp的分区
+
+create table emp_partition(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double
+)partitioned by (deptno int) 
+row format delimited fields terminated  by '\t';
+
+insert overwrite table emp_partition  partition(deptno=10) select empno,ename,job,mgr,hiredate,sal,comm from emp where deptno=10;
+
+报错：
+hive (ruozedata_hive)> insert overwrite table emp_partition  partition(deptno=10) select * from emp where deptno=10;
+FAILED: SemanticException [Error 10044]: Line 1:23 Cannot insert into target table because column number/types are different '10': Table insclause-0 has 7 columns, but query has 8 columns.
+hive (ruozedata_hive)> 
+表表里面7个字段，源表里有8个字段
+
+
+动态分区  和静态分区创建表语法一样， 需要set hive.exec.dynamic.partition.mode=nonstrict;
+
+动态分区的好处: 导数据不需要指定分区，指定分区字段，即可将数据导入进来。
+create table emp_dynamic_partition(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double
+)partitioned by (deptno int) 
+row format delimited fields terminated  by '\t';
+
+INSERT OVERWRITE TABLE emp_dynamic_partition PARTITION (deptno) select empno,ename,job,mgr,hiredate,sal,comm,deptno from emp;
+
+DML：
+
+LOAD DATA LOCAL INPATH '/home/hadoop/data/order_created.txt' [OVERWRITE] INTO TABLE order_mulit_partition PARTITION (event_month='2014-05',step='1');
+LOAD DATA : 加载数据
+LOCAL: "本地"  没有的话就HDFS
+INPATH: 指定路径
+OVERWRITE：数据覆盖  没有的话就是追加
+
+CTAS : create table .. as select...
+	表不能事先存在
+
+insert：
+	表必须事先存在
+insert overwrite table emp4 select empno,job,ename,mgr,hiredate,sal,comm,deptno from emp;	
+	
+from emp insert into table emp4 select *;
+
+数据从hive导出到本地
+	INSERT OVERWRITE local DIRECTORY '/home/kobekun/tmp/hivetmp' ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' SELECT empno,ename FROM emp;
+数据从hive导出到hdfs上	
+	INSERT OVERWRITE DIRECTORY '/hivetmp' ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' SELECT empno,ename FROM emp;
+
+
+hive -e "select empno,ename from ruozedata_hive.emp limit 5" > file
+hive -e "select empno,ename from ruozedata_hive.emp limit 5" |grep SMITH
+
+squoop做数据导入导出。
+
+select * from emp where comm is null;
+
+select sal from emp where sal like '_2%';   like 使用-或者%
+select sal from emp where sal rlike '[2]';  rlike 正则 工资有2的
+
+聚合： 多进一出
+	max 
+	min
+	count
+	sum
+	avg
+
+求部门的平均工资
+	select deptno,avg(sal) from emp group by deptno;
+select 中出现的字段如果没有出现在group by中，一定要出现在聚合函数中。
+
+where和having区别   where对单条记录做过滤，having分组过滤
+
+set hive.fetch.task.conversion=more;
+set hive.fetch.task.conversion=none; (select * from emp;都得跑MapReduce)
+
+
+过滤的(select filter limit)都不会跑MapReduce
+统计、聚合操作都会跑MapReduce
+
+
+
+
+

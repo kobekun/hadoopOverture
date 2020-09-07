@@ -1,0 +1,226 @@
+HiveServer2 = HS2
+
+HS2 : Server  先启动  ./hiveserver2
+	默认端口号是10000
+		可以改成别的端口号  hiveserver2  --hiveconf hive.server2.thrift.port=10086
+beeline : Client   hive/spark
+	启动beeline时，建议先 cd $HIVE_HOME/bin中去（spark的bin中也有beeline ）
+	 ./beeline -u jdbc:hive2://ruozedata001:10000/ruozedata_hive -n kobekun
+	 
+	./beeline -u jdbc:hive2://ruozedata001:10086/ruozedata_hive -n kobekun
+
+
+ 
+Hive复杂数据类型
+	array<T> 数据类型要一样
+create table hive_array(name string,work_locations array<string>)
+row format delimited fields terminated by '\t'
+collection items terminated by ',';
+	
+load data local inpath '/home/kobekun/app/hadoop/sbin/hive_array.txt' into table hive_array;
+
+ select name,work_locations[0] from hive_array;
+ select name,size(work_locations) from hive_array;
+select name,array_contains(work_locations,'tianjing') from hive_array;
+ 
+	MAP<primitive_type, data_type>  kv
+create table hive_map(
+id int,name string,members map<string,string>,age int
+)row format delimited fields terminated by ','
+collection items terminated by '#'
+map keys terminated by ':';  
+  
+load data local inpath '/home/kobekun/app/hadoop/sbin/hive_map.txt' into table hive_map;
+  
+ select name,members['father'] as father,members['mother'] as mother from hive_map; 
+ select name,map_keys(members),age from hive_map;
+ select name,map_values(members),age from hive_map;
+ select id,name,size(members),age from hive_map;
+  
+  判断有兄弟的
+ select id,name,members['brother'] as brother,age from hive_map where array_contains(map_keys(members),'brother'); 
+  
+  struct
+  192.168.1.1#zhangsan:40
+create table hive_struct(
+ip string,
+info struct<name:string,age:int>
+)row format delimited fields terminated by '#'
+collection items terminated by ':';
+  
+  select ip,info.name,info.age from hive_struct;
+  
+  
+  click_log
+	cookieid
+	ad_id
+	time
+	
+create table click_log(
+cookieid string,
+ad_id string,
+time string
+)row format delimited fields terminated by '\t';
+  load data local inpath '/home/kobekun/app/hadoop/sbin/click_log.txt' into table click_log;
+  
+create table ad_list(
+ad_id string,
+url string,
+catalogs string
+)row format   delimited fields terminated by '\t';
+ load data local inpath '/home/kobekun/app/hadoop/sbin/ad_list.txt' into table ad_list;
+  
+  人访问的所有ad_id去重
+  select cookieid,collect_set(ad_id) from click_log group by cookieid;
+  不去重
+  select cookieid,collect_list(ad_id) from click_log group by cookieid;
+  广告的访问量
+  select cookieid,ad_id,count(1) as amount from click_log group by cookieid,ad_id;
+  
+select
+a.cookieid,a.ad_id,b.catalogs
+from
+(select cookieid,ad_id,count(1) amount from click_log group by cookieid,ad_id) a
+join ad_list b
+on a.ad_id = b.ad_id;
+  
+  列转行
+  ad_101   | catalog8|catalog1
+  ==》
+  ad_101 	catalog8
+  ad_101 	catalog1
+  
+  select ad_id,catalog from ad_list lateral view explode(split(catalogs,'\\|')) num as catalog;  (有空值不列空值)
+  select ad_id,catalog from ad_list lateral view outer explode(split(catalogs,'\\|')) t as catalog; (有空值把空值列出)
+  
+  
+ 把catalogs中的类别进行排序
+create table ad_list_2(
+ad_id string,
+url string,
+catalogs array<string>
+)row format   delimited fields terminated by '\t'
+collection items terminated by '|';
+  load data local inpath '/home/kobekun/app/hadoop/sbin/ad_list.txt' into table ad_list_2;
+  
+  select ad_id,sort_array(catalogs) from ad_list_2;
+  
+  
+  function
+	built-in 内置函数
+	UDF	用户自定义函数
+	
+	show functions;
+  desc function upper;
+  desc function extended upper;
+  
+  create table dual(x string);
+  insert into table dual values(''); 
+  
+   select current_date from dual;
+   select current_timestamp from dual;
+   select unix_timestamp('20191222 13:20:05','yyMMdd HH:mm:ss') from dual;
+   
+   date_add 日期加减
+   date_sub
+   
+  select cast("2019-12-20" as date) from dual;
+  select cast(current_timestamp as date) from dual;
+  
+  binary只能转string
+  
+  binary想转int ：  binary==》string ==》int
+  
+  least 最小
+  greatest 最大
+  substr 截取字符串
+  substring 同上
+  length 长度
+  
+  select concat_ws(".","192","168","10","10") from dual;  用什么分割符将什么内容连接起来
++----------------+--+
+|      _c0       |
++----------------+--+
+| 192.168.10.10  |
++----------------+--+
+  
+  split  注意转义
+  select split("192.168.10.10","\\.") from dual;
+   select split("192.168.10.10",".") from dual;     xxxxxx
+  
+  函数可以连起来用
+  
+  
+  集合操作：
+  array_contains	boolean
+  sort_array 排序后的数组
+  size	返回数值
+  map_keys	返回数组
+  map_values  返回数组
+  
+  
+  json
+	create table rating_json(json string);
+	load data local inpath '/home/kobekun/app/hadoop/sbin/rating.json' into table rating_json;
+  
+  json_tuple
+  select json_tuple(json,'movie','rate','time','userid') as (movie,rate,time,userid) from rating_json;
+  
+select userid,movie,rate,time,
+from_unixtime(cast(time as bigint)) as ts,
+year(from_unixtime(cast(time as bigint))) as year,
+month(from_unixtime(cast(time as bigint))) as month ,
+day(from_unixtime(cast(time as bigint))) as day ,
+hour(from_unixtime(cast(time as bigint))) as hour ,
+minute(from_unixtime(cast(time as bigint))) as minute ,
+second(from_unixtime(cast(time as bigint))) as second
+from (select json_tuple(json,'movie','rate','time','userid') as (movie,rate,time,userid) from rating_json) t;
+
+子查询表需要起个别名  否则报错
+0: jdbc:hive2://ruozedata001:10000/ruozedata_> select userid,movie,rate,time,
+. . . . . . . . . . . . . . . . . . . . . . .> from_unixtime(cast(time as bigint)) as ts,
+. . . . . . . . . . . . . . . . . . . . . . .> year(from_unixtime(cast(time as bigint))) as year,
+. . . . . . . . . . . . . . . . . . . . . . .> month(from_unixtime(cast(time as bigint))) as month ,
+. . . . . . . . . . . . . . . . . . . . . . .> day(from_unixtime(cast(time as bigint))) as day ,
+. . . . . . . . . . . . . . . . . . . . . . .> hour(from_unixtime(cast(time as bigint))) as hour ,
+. . . . . . . . . . . . . . . . . . . . . . .> minute(from_unixtime(cast(time as bigint))) as minute ,
+. . . . . . . . . . . . . . . . . . . . . . .> second(from_unixtime(cast(time as bigint))) as second
+. . . . . . . . . . . . . . . . . . . . . . .> from (select json_tuple(json,'movie','rate','time','userid') as (movie,rate,time,userid) from rating_json);
+Error: Error while compiling statement: FAILED: ParseException line 9:106 cannot recognize input near '<EOF>' '<EOF>' '<EOF>' in subquery source (state=42000,code=40000)
+0: jdbc:hive2://ruozedata001:10000/ruozedata_> 
+
+parse_url_tuple
+  注意里面的host、path等都是大写
+select parse_url_tuple("http://www.ruozedata.com/bigdata/cookie_id=10",'HOST','PATH','QUERY') from dual;
+  select parse_url_tuple("http://www.ruozedata.com/bigdata/spark?cookie_id=10",'HOST','PATH','QUERY') from dual;
+  select parse_url_tuple("http://www.ruozedata.com/bigdata/spark?cookie_id=10&a=b&c=d",'HOST','PATH','QUERY') from dual;
+  
++--------------------+-----------------+-----------------------+--+
+|         c0         |       c1        |          c2           |
++--------------------+-----------------+-----------------------+--+
+| www.ruozedata.com  | /bigdata/spark  | cookie_id=10&a=b&c=d  |
++--------------------+-----------------+-----------------------+
+  
+  select parse_url_tuple("http://www.ruozedata.com/bigdata/spark?cookie_id=10&a=b&c=d",'HOST','PATH','QUERY','QUERY:cookie_id') from dual;
+  
++--------------------+-----------------+-----------------------+-----+--+
+|         c0         |       c1        |          c2           | c3  |
++--------------------+-----------------+-----------------------+-----+--+
+| www.ruozedata.com  | /bigdata/spark  | cookie_id=10&a=b&c=d  | 10  |
++--------------------+-----------------+-----------------------+-----+
+  
+  select empno,ename,sal,comm,isnull(comm) isnull, isnotnull(comm) isnotnull from emp;
+  
+  
+  assert_true(comm is null)  不为空，抛异常
+  
+  select elt(2,'laozhan','nongmei','xiaoka') from dual; 
+  
++----------+--+
+|   _c0    |
++----------+--+
+| nongmei  |
++----------+--
+
+ select empno,ename,sal,comm,nvl(comm,-1) from emp;
+

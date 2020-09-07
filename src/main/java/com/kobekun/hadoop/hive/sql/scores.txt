@@ -1,0 +1,104 @@
+2020,语文,A,83
+2020,数学,A,58
+2020,英语,A,29
+2020,语文,B,83
+2020,数学,B,77
+2020,英语,B,67
+2021,语文,A,50
+2021,数学,A,93
+2021,英语,A,70
+2021,语文,B,86
+2021,数学,B,43
+2021,英语,B,39
+2022,语文,A,90
+2022,数学,A,49
+2022,英语,A,80
+2022,语文,B,80
+2022,数学,B,83
+2022,英语,B,97
+
+
+2) 每年每门学科排名第一的学生
+	group by 年,学科
+	
+3) 每年总成绩都有提升的学生
+	
+	sum(成绩) group by 年,人
+	
+create table scores2 (
+year int,
+subject string,
+student string,
+score int
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/kobekun/data/scores.txt' into table  scores2;
+	
+	
+2) 
+select a.year,a.subject,a.student,a.score from 
+(select year,	subject, student, score, row_number() over (partition by year,subject order by score desc) num from scores2) a
+where a.num=1;	
+	
+3)
+
+select b.student from 
+(
+select a.year,a.student,a.sumscore,lag(a.sumscore,1,0) over ( partition by a.student order by a.year) lagsumscore,
+(a.sumscore-lag(a.sumscore,1,0) over ( partition by a.student order by a.year)) growup
+from(
+select year,student,sum(score) sumscore from scores2 group by year,student
+) a ) b 
+group by b.student having min(b.growup)>=0;
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+

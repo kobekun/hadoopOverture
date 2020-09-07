@@ -1,0 +1,32 @@
+
+Hive/Spark SQL：server启动
+	HiveServer2: 10000
+	ThriftServer: 14000
+	
+	不同的地方：Hive和ThriftServer build-in UDF是不同的
+   
+连续问题
+
+
+1) 至少连续出现3次的数字
+	表里  两列数据
+	
+	
+2) 每年每门学科排名第一的学生
+	group by 年,学科
+
+3) 每年总成绩都有提升的学生
+	
+	sum(成绩) group by 年,人
+
+
+4) 求年度[?]最大连续登陆天数
+
+dayofyear
+
+
+
+
+
+
+   
