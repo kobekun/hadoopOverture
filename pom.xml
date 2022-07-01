@@ -6,7 +6,7 @@
   <inceptionYear>2008</inceptionYear>
   <properties>
     <!--定义Hadoop版本-->
-    <hadoop.version>2.6.0-cdh5.15.1</hadoop.version>
+    <hadoop.version>2.7.0</hadoop.version>
   </properties>
 
   <repositories>
